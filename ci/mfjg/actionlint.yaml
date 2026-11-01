@@ -1,0 +1,4 @@
+# Static recognition only; this does not enroll or relabel a runner.
+self-hosted-runner:
+  labels:
+    - tensorzero-qualified

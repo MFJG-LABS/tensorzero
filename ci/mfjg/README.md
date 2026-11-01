@@ -45,23 +45,33 @@ qualification.
 
 ## Build and release boundary
 
-`mfjg-contract.yml` is manual-only and requires an exact reviewed SHA on an
-`mfjg/*` branch. It uses a separately enrolled `tensorzero-qualified` Linux
-ARM64 runner. It has no PR trigger, provider secrets, package-write permission
-or publication step. Do not add that label to an active general-purpose runner
-to bypass capacity or trust enrollment. Repository Actions enablement and the
-runner enrollment remain operator-managed; this source change does neither.
-GitHub must also register the workflow on the repository's default branch
-before `workflow_dispatch` is available. The fork currently defaults to the
-unchanged upstream `main`. After source review, establish `mfjg/main` containing
-the reviewed workflow and make that branch the fork default as part of the
-explicit activation step; retain upstream `main` for comparison. A workflow
-file pushed only to a development branch is not yet dispatchable.
+Synthetic rebuild qualification is carried by the private
+[`MFJG-LABS/github-runners-config/.github/workflows/tensorzero-qualification.yml`](https://github.com/MFJG-LABS/github-runners-config/blob/main/.github/workflows/tensorzero-qualification.yml).
+Its [operator requirements](https://github.com/MFJG-LABS/github-runners-config/blob/main/docs/tensorzero-qualification.md)
+are private; public readers may not have access. The dormant public workflow
+has been removed. The public fork keeps upstream `main` as its default and
+MFJG development stays on `mfjg/*` branches.
 
-The workflow qualifies the original image, rebuilds the candidate with the
-Cargo lock, tests the candidate, and retains receipts. The temporary CI image
-is not a release. Before publishing a release, update the workspace/package
-versions consistently to `2026.6.0-mfjg.N`, run the upstream required Rust
+The manual private carrier binds the exact reviewed source SHA and full
+`refs/heads/mfjg/...` branch to its separately reviewed carrier SHA on private
+`main`. It anonymously fetches the fixed public repository and fails if the
+branch no longer resolves to that exact source. Review/admission references
+are operator-supplied claims requiring independent verification. Source changes
+do not activate execution: private default-branch workflow registration,
+restricted runner-group access, a unique placement label, a qualified clean
+one-job Linux ARM64 worker with its own disposable Docker daemon and enforced
+resource limits, and existing owner authority remain separate prerequisites.
+
+The carrier reuses this reviewed synthetic harness for the original image and
+an exact-source candidate built with Cargo `--locked` and the performance
+profile. It retains source/build identities, parity and bounded cleanup
+receipts in the private run for 14 days; the owner must export accepted
+evidence before expiry and supply external deregistration/daemon teardown
+proof. A timeout, failed cleanup or missing evidence leaves qualification
+incomplete. Dockerfile base tags and apt repositories remain mutable, so this
+is source traceability without a bit-identical rebuild claim. The temporary
+CI image is never pushed and is not a release. Before publishing a release,
+update the workspace/package versions consistently to `2026.6.0-mfjg.N`, run the upstream required Rust
 checks and the synthetic gate on the exact revision, and review the final diff.
 Publish to `ghcr.io/mfjg-labs/tensorzero-gateway`; deployment must use its
 registry digest. Never overwrite or publish under upstream TensorZero tags.

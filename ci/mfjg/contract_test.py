@@ -5,7 +5,7 @@ import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from synthetic_provider import FUNCTIONS
+from synthetic_provider import FUNCTIONS, USAGE
 
 
 def get(url):
@@ -58,7 +58,8 @@ def run():
     for function in FUNCTIONS:
         plain = json.loads(request(function))
         assert plain["choices"][0]["message"]["content"] == "synthetic-ok", plain
-        assert plain["usage"]["total_tokens"] == 5, plain
+        assert plain["choices"][0]["finish_reason"] == "stop", plain
+        assert all(plain["usage"].get(key) == value for key, value in USAGE.items()), plain
         checks.append(f"{function}:chat:fallback:usage")
         raw = request(function, stream=True, stream_options={"include_usage": True})
         events = [line[6:] for line in raw.splitlines() if line.startswith("data: ")]
@@ -68,7 +69,12 @@ def run():
             choice["delta"].get("content", "") or "" for chunk in chunks for choice in chunk.get("choices", [])
         )
         assert text == "synthetic-ok", chunks
-        assert any((chunk.get("usage") or {}).get("total_tokens") == 5 for chunk in chunks), chunks
+        assert any(choice.get("finish_reason") == "stop" for chunk in chunks for choice in chunk.get("choices", [])), (
+            chunks
+        )
+        assert any(
+            all((chunk.get("usage") or {}).get(key) == value for key, value in USAGE.items()) for chunk in chunks
+        ), chunks
         checks.append(f"{function}:stream:fallback:usage")
     tool = json.loads(
         request(
@@ -92,6 +98,7 @@ def run():
     )
     call = tool["choices"][0]["message"]["tool_calls"][0]
     assert call["function"]["name"] == "lookup", tool
+    assert tool["choices"][0]["finish_reason"] == "tool_calls", tool
     assert json.loads(call["function"]["arguments"]) == {"path": "README.md"}, tool
     checks.append("mechanical:tool_call")
     structured = json.loads(request("mechanical", response_format={"type": "json_object"}))

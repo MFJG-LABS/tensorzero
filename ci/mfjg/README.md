@@ -51,6 +51,12 @@ ARM64 runner. It has no PR trigger, provider secrets, package-write permission
 or publication step. Do not add that label to an active general-purpose runner
 to bypass capacity or trust enrollment. Repository Actions enablement and the
 runner enrollment remain operator-managed; this source change does neither.
+GitHub must also register the workflow on the repository's default branch
+before `workflow_dispatch` is available. The fork currently defaults to the
+unchanged upstream `main`. After source review, establish `mfjg/main` containing
+the reviewed workflow and make that branch the fork default as part of the
+explicit activation step; retain upstream `main` for comparison. A workflow
+file pushed only to a development branch is not yet dispatchable.
 
 The workflow qualifies the original image, rebuilds the candidate with the
 Cargo lock, tests the candidate, and retains receipts. The temporary CI image

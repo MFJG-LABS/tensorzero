@@ -1,0 +1,18 @@
+{
+  "upstream_repository": "tensorzero/tensorzero",
+  "source_revision": "62eb8f63e8ec62018d70420dbf1a8c5d1c026315",
+  "upstream_version": "2026.6.0",
+  "gateway_image": "tensorzero/gateway:2026.6.0@sha256:c939db4f27e41aa3a37a87909430a0c8f898f9c952f402dcbdc17e1708597bcb",
+  "synthetic_provider_image": "python@sha256:6771159cd4fa5d9bba1258caf0b82e6b73458c694d178ad97c5e925c2d0e1a91",
+  "release_image_repository": "ghcr.io/mfjg-labs/tensorzero-gateway",
+  "release_version_format": "2026.6.0-mfjg.N",
+  "function_provider_counts": {
+    "mechanical": 3,
+    "integration": 3,
+    "bigread": 3,
+    "judgment": 4,
+    "deep": 4,
+    "classifier": 2,
+    "mechanical-batch": 3
+  }
+}

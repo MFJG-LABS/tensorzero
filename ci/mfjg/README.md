@@ -3,15 +3,14 @@
 This fork preserves upstream history and the deployed `2026.6.0` source at
 `62eb8f63e8ec62018d70420dbf1a8c5d1c026315`. Develop on `mfjg/*` branches; keep
 upstream `main` as the comparison point. `baseline.json` records the original
-image digest and the seven function names and routing widths used for parity.
-It contains no private runtime configuration or credentials.
+image digest and the seven function names plus one synthetic exhaustion route
+(`exhausted`) with their routing widths used for parity. It contains no
+private runtime configuration or credentials.
 
 Before changes are promoted, retain an image archive and its SHA-256 receipt
-outside the repository. The initial archive was captured on 2026-11-01 with
-SHA-256 `7375da0b4d98fe817033a80d5aa2238bb6934ed7483206b9c2b43e9243a47b21`.
-`docker load --input <verified-archive>` can restore image availability; it
-does not change a running deployment. Runtime rollback remains a separately
-qualified owner operation.
+outside the repository. `docker load --input <verified-archive>` can restore
+image availability; it does not change a running deployment. Runtime rollback
+remains a separately qualified owner operation.
 
 ## Synthetic contract gate
 
@@ -31,7 +30,8 @@ created; `cleanup.json` records whether removal succeeded. A synthetic request
 cannot reach a cloud provider from that network.
 
 The gate exercises chat and SSE streaming for all seven functions, ordered
-fallbacks through each routing slot, usage, a tool call and JSON output. It
+fallbacks through each routing slot, usage, a tool call, JSON output, and
+terminal exhaustion of a route with no success provider. It
 checks the actual provider request sequence, not just the final response.
 This proves protocol behavior against a controlled provider. It does not
 qualify live model quality, production secrets, effective context limits,

@@ -53,7 +53,8 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 python3 "$here/synthetic_provider.py" --config >"$receipt/tensorzero.toml"
-docker image inspect "$image" --format '{{json .Id}} {{json .Config.Labels}}' >"$receipt/image.txt"
+docker image inspect "$image" --format '{{json .Id}} {{json .Architecture}} {{json .Os}} {{json .Config.Labels}}' >"$receipt/image.txt"
+docker version --format 'client={{.Client.Version}} server={{.Server.Version}} arch={{.Server.Arch}}' >"$receipt/docker.txt"
 network="$(docker network create --internal --label mfjg.purpose=synthetic-parity "$prefix")"
 common=(--network "$network" --label mfjg.purpose=synthetic-parity --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 128)
 provider="$(docker create "${common[@]}" --name "$prefix-provider" --network-alias provider \

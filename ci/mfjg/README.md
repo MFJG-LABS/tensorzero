@@ -29,6 +29,10 @@ mounts production data. Cleanup is limited to the container/network IDs it
 created; `cleanup.json` records whether removal succeeded. A synthetic request
 cannot reach a cloud provider from that network.
 
+Receipts record both image identities with their architecture and OS plus
+the Docker daemon version, so the parity comparison is machine-checkable on
+any carrier.
+
 The gate exercises chat and SSE streaming for all seven functions, ordered
 fallbacks through each routing slot, usage, a tool call, JSON output, and
 terminal exhaustion of a route with no success provider. It

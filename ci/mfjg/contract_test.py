@@ -28,26 +28,42 @@ def wait_ready(url):
     raise RuntimeError(f"synthetic service never became ready: {url}")
 
 
-def request(function, **extra):
-    before = len(get("http://provider:8080/attempts"))
+def send(function, **extra):
+    """Send one request; return (status, raw) without raising on gateway errors."""
     body = {
         "model": f"tensorzero::function_name::{function}",
         "messages": [{"role": "user", "content": "synthetic parity check"}],
         **extra,
     }
-    with urlopen(
-        Request(
-            "http://gateway:3000/openai/v1/chat/completions",
-            data=json.dumps(body).encode(),
-            headers={"Content-Type": "application/json"},
-        ),
-        timeout=15,
-    ) as response:
-        raw = response.read().decode()
-    attempts = get("http://provider:8080/attempts")[before:]
+    try:
+        with urlopen(
+            Request(
+                "http://gateway:3000/openai/v1/chat/completions",
+                data=json.dumps(body).encode(),
+                headers={"Content-Type": "application/json"},
+            ),
+            timeout=15,
+        ) as response:
+            return response.status, response.read().decode()
+    except HTTPError as error:
+        raw = error.read().decode(errors="replace")
+        error.close()
+        return error.code, raw
+
+
+def attempts_since(before):
+    return get("http://provider:8080/attempts")[before:]
+
+
+def request(function, **extra):
+    before = len(get("http://provider:8080/attempts"))
+    status, raw = send(function, **extra)
+    if status != 200:
+        raise AssertionError(f"expected 200 for {function}, got {status}: {raw[:200]}")
     expected = [f"{function}-fail-{i}" for i in range(FUNCTIONS[function] - 1)] + [f"{function}-ok"]
-    if attempts != expected:
-        raise AssertionError(f"fallback evidence mismatch: {function}: {attempts!r} != {expected!r}")
+    seen = attempts_since(before)
+    if seen != expected:
+        raise AssertionError(f"fallback evidence mismatch: {function}: {seen!r} != {expected!r}")
     return raw
 
 
@@ -104,6 +120,21 @@ def run():
     structured = json.loads(request("mechanical", response_format={"type": "json_object"}))
     assert json.loads(structured["choices"][0]["message"]["content"]) == {"ok": True}, structured
     checks.append("mechanical:json")
+    # Terminal reasons: a route whose providers all fail must terminate with an
+    # error, never succeed, and must have attempted every provider exactly once.
+    before = len(get("http://provider:8080/attempts"))
+    status, raw = send("exhausted")
+    assert 400 <= status < 600, f"exhausted chat did not terminate with an error: {status}"
+    seen = attempts_since(before)
+    expected = [f"exhausted-fail-{i}" for i in range(FUNCTIONS["exhausted"])]
+    assert seen == expected, f"exhausted chat attempts: {seen!r} != {expected!r}"
+    checks.append("exhausted:chat:terminal_reason")
+    before = len(get("http://provider:8080/attempts"))
+    status, raw = send("exhausted", stream=True, stream_options={"include_usage": True})
+    assert 400 <= status < 600 or "synthetic-ok" not in raw, f"exhausted stream succeeded: {status}"
+    seen = attempts_since(before)
+    assert seen == expected, f"exhausted stream attempts: {seen!r} != {expected!r}"
+    checks.append("exhausted:stream:terminal_reason")
     print(
         json.dumps(
             {

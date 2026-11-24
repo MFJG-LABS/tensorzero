@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import tomllib
-from synthetic_provider import Handler, Server, config
+from synthetic_provider import MODELS, Handler, Server, config
 
 
 class SyntheticProviderTest(unittest.TestCase):
@@ -69,6 +69,15 @@ class SyntheticProviderTest(unittest.TestCase):
                 self.post(body)
             self.assertEqual(failure.exception.code, 400)
             failure.exception.close()
+
+    def test_exhausted_route_has_no_success_slot(self):
+        self.assertNotIn("exhausted-ok", MODELS)
+        for model in ("exhausted-fail-0", "exhausted-fail-1"):
+            with self.assertRaises(HTTPError) as failed:
+                self.post({"model": model})
+            self.assertEqual(failed.exception.code, 503)
+            failed.exception.close()
+        self.assertEqual(self.server.attempts, ["exhausted-fail-0", "exhausted-fail-1"])
 
     def test_generated_config_is_secrets_free_and_reproduces_seven_routes(self):
         document = tomllib.loads(config())

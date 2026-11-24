@@ -8,18 +8,22 @@ from pathlib import Path
 
 BASELINE = json.loads(Path(__file__).with_name("baseline.json").read_text())
 FUNCTIONS = BASELINE["function_provider_counts"]
-MODELS = {
-    model
-    for name, count in FUNCTIONS.items()
-    for model in [f"{name}-ok", *(f"{name}-fail-{i}" for i in range(count - 1))]
-}
+
+
+def providers_for(name, count):
+    """Provider aliases in routing order. The exhausted route has no success slot."""
+    fails = [f"fail-{i}" for i in range(count if name == "exhausted" else count - 1)]
+    return fails if name == "exhausted" else fails + ["ok"]
+
+
+MODELS = {f"{name}-{p}" for name, count in FUNCTIONS.items() for p in providers_for(name, count)}
 USAGE = {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5}
 
 
 def config():
     lines = ["[gateway]", 'bind_address = "0.0.0.0:3000"', "[gateway.observability]", "enabled = false"]
     for name, count in FUNCTIONS.items():
-        providers = [f"fail-{i}" for i in range(count - 1)] + ["ok"]
+        providers = providers_for(name, count)
         lines += [f'[models."tier-{name}"]', f"routing = {json.dumps(providers)}"]
         for provider in providers:
             lines += [
